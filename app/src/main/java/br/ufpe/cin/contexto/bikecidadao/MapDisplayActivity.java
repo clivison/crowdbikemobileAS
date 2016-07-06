@@ -303,7 +303,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
 		entity.setAttributes(attributes);
 
 		Gson gson = new Gson();
-		String uri = "http://148.6.80.19:1026/v1/contextEntities/";
+		String uri = "http://130.206.112.159:1026/v1/contextEntities/";
 		uri += id;
 
 		try
@@ -359,7 +359,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
         Gson gson = new Gson();
 
 
-        String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
+        String uri = "http://130.206.112.159:1026/v1/queryContext?limit=500&details=on";
         String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
         OkHttpClient client = new OkHttpClient();
         try
@@ -622,7 +622,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
         String id =  markers.get(marker.getId());// pegar id do objeto marcador---------------------------------
 
         Gson gson = new Gson();
-        String uri = "http://148.6.80.19:1026/v1/contextEntities/";
+        String uri = "http://130.206.112.159:1026/v1/contextEntities/";
         uri += id;
 
         try

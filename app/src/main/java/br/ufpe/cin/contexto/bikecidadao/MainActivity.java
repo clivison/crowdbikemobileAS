@@ -2,10 +2,8 @@ package br.ufpe.cin.contexto.bikecidadao;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
@@ -13,13 +11,11 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StrictMode;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.support.design.widget.NavigationView;
 import android.support.v4.content.ContextCompat;
@@ -30,7 +26,6 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
-import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -559,7 +554,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 		BufferedReader rd;
 		try {
-			String uri = "http://148.6.80.19:1026/v1/queryContext";
+			String uri = "http://130.206.112.159:1026/v1/queryContext";
             String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
                     "{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
                     latitudeString +"\",\"centerLongitude\": \"" +longitudeString +"\",\"radius\": \"30\"}}}]}}";
@@ -1193,7 +1188,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         Gson gson = new Gson();
 
 
-        String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
+        String uri = "http://130.206.112.159:1026/v1/queryContext?limit=500&details=on";
         String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
         OkHttpClient client = new OkHttpClient();
         try

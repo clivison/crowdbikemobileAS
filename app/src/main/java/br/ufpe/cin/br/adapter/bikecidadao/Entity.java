@@ -36,6 +36,4 @@ public class Entity {
 		this.attributes = attributes;
 	}
 
-	
-
 }

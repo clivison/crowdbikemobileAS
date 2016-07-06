@@ -12,18 +12,16 @@ import android.support.v4.app.NotificationCompat;
 
 import com.example.bikecidadao.R;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.*;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
-import com.google.maps.android.SphericalUtil;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import br.ufpe.cin.db.bikecidadao.LocalRepositoryController;
+import br.ufpe.cin.db.bikecidadao.RemoteRepositoryController;
 import br.ufpe.cin.db.bikecidadao.model.GeoLocation;
 import br.ufpe.cin.db.bikecidadao.model.TrackInfo;
 import br.ufpe.cin.util.bikecidadao.Constants;
@@ -55,6 +53,7 @@ public class LocationTrackerService extends Service implements LocationListener,
     Intent loggingIntent;
 
     private LocalRepositoryController localRepositoryController;
+    private RemoteRepositoryController remoteRepositoryController;
 
     private Gson gson;
     private Location startLocation;
@@ -77,6 +76,7 @@ public class LocationTrackerService extends Service implements LocationListener,
 
     private void initVariables(){
         localRepositoryController = new LocalRepositoryController(this);
+        remoteRepositoryController = new RemoteRepositoryController(this);
         gson = new Gson();
         loggingIntent = new Intent(BROADCAST_ACTION);
     }
@@ -271,6 +271,9 @@ public class LocationTrackerService extends Service implements LocationListener,
         TrackInfo trackInfo = new TrackInfo(getStartTime(), System.currentTimeMillis(), distance);
         trackInfo.setTrackingPoints(trackingPoints);
         localRepositoryController.saveTmpTracking(trackInfo);
+        remoteRepositoryController.saveTracking(trackInfo);
+
+
     }
 
     private void startResultsActivity(){

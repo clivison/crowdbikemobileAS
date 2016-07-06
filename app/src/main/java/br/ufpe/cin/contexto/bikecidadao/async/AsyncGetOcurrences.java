@@ -65,7 +65,7 @@ public class AsyncGetOcurrences extends AsyncTask <String, Void, List<Ocorrencia
 		Gson gson = new Gson();
 
 
-		String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
+		String uri = "http://130.206.112.159:1026/v1/queryContext?limit=500&details=on";
 		String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
 		OkHttpClient client = new OkHttpClient();
 		try
