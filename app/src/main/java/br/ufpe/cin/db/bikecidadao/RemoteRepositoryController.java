@@ -47,61 +47,6 @@ public class RemoteRepositoryController {
         gson = new Gson();
     }
 
-    /*public void saveTracking(TrackInfo trackInfo) {
-
-        String id = String.valueOf(IdGenerator.generateUniqueId());
-        Entity entity = new Entity();
-        List<Attributes> attributes = new ArrayList<Attributes>();
-        attributes.add(new Attributes("startTime", "String", trackInfo.getStartTime()+"", null));
-        attributes.add(new Attributes("endTime", "String", trackInfo.getEndTime()+"", null));
-        attributes.add(new Attributes("totalDist", "String", trackInfo.getDistance()+"", null));
-        attributes.add(new Attributes("totalTime", "String", trackInfo.getElapsedTime()+"", null));
-
-        Collection<GeoLocation> col = trackInfo.getTrackingPoints();
-        Iterator<GeoLocation> it = col.iterator();
-
-        List<Metadata> metadatas = new ArrayList<Metadata>();
-        metadatas.add(new Metadata("location", "String", "WGS84"));
-
-        while(it.hasNext()) {
-
-            GeoLocation geoLocation = it.next();
-            attributes.add(new Attributes("position","coords", geoLocation.getLatitude() + ", " + geoLocation.getLongitude(), metadatas));
-
-        }
-
-        entity.setType("Route");
-        entity.setId(id);
-        entity.setAttributes(attributes);
-
-        Gson gson = new Gson();
-        String uri = "http://130.206.112.159:1026/v1/contextEntities/";
-        uri += id;
-
-
-
-        try {
-            OkHttpClient client = new OkHttpClient();
-            RequestBody body = RequestBody.create(JSON, gson.toJson(entity));
-            Request request = new Request.Builder().url(uri).post(body).build();
-            Response response;
-
-            int executeCount = 0;
-            do {
-                response = client.newCall(request).execute();
-                executeCount++;
-            }   while(response.code() == 408 && executeCount < 5);
-
-            //System.out.println(response.toString());
-            //System.out.println(gson.toJson(entity));
-            //System.out.println(request.toString());
-            //System.out.println(request.body());
-
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-    }*/
-
     public void saveTracking(TrackInfo trackInfo) {
 
         boolean primeiro;
@@ -109,10 +54,10 @@ public class RemoteRepositoryController {
         Entity entity = new Entity();
         String id = String.valueOf(IdGenerator.generateUniqueId());
         List<Attributes> attributes = new ArrayList<Attributes>();
-        attributes.add(new Attributes("iniio", "String",  AdapterOcurrence.df.format(trackInfo.getStartTime()) +"", null));
-        attributes.add(new Attributes("fim", "String", AdapterOcurrence.df.format(trackInfo.getStartTime()) +"", null));
-        attributes.add(new Attributes("distanciaTotal", "String", trackInfo.getDistance()+"", null));
-        attributes.add(new Attributes("tempoTotal", "String", trackInfo.getElapsedTime()+"", null));
+        //attributes.add(new Attributes("momentoInicio", "String",  AdapterOcurrence.df.format(trackInfo.getStartTime()) +"", null));
+        //attributes.add(new Attributes("momentofim", "String", AdapterOcurrence.df.format(trackInfo.getStartTime()) +"", null));
+        //attributes.add(new Attributes("distanciaTotal", "String", trackInfo.getDistance()+"", null));
+        //attributes.add(new Attributes("tempoTotal", "String", trackInfo.getElapsedTime()+"", null));
 
         Collection<GeoLocation> col = trackInfo.getTrackingPoints();
         Iterator<GeoLocation> it = col.iterator();
@@ -125,11 +70,11 @@ public class RemoteRepositoryController {
             if (primeiro) {
                 List<Metadata> metadatas = new ArrayList<Metadata>();
                 metadatas.add(new Metadata("location", "String", "WGS84"));
-                attributes.add(new Attributes("startPoint","coords", geoLocation.getLatitude() + ", " + geoLocation.getLongitude(), metadatas));
+                attributes.add(new Attributes("largada","coords", geoLocation.getLatitude() + ", " + geoLocation.getLongitude(), metadatas));
                 primeiro = false;
             }
 
-            attributes.add(new Attributes("passo" + contador,"String", geoLocation.getLatitude() + ", " + geoLocation.getLongitude(), null));
+            attributes.add(new Attributes("p" + contador,"String", geoLocation.getLatitude() + ", " + geoLocation.getLongitude(), null));
 
         }
 
@@ -165,7 +110,7 @@ public class RemoteRepositoryController {
         }
     }
 
-    public String getRoutes() throws Exception {
+    public String getRoutes(double pLatitude, double pLongitude) throws Exception {
 
         int responseCode = 0;
         String json = "";
@@ -175,9 +120,9 @@ public class RemoteRepositoryController {
         BufferedReader rd;
         try {
             String uri = "http://130.206.112.159:1026/v1/queryContext";
-            String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
+            String getAll = "{\"entities\": [{\"type\": \"Route\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
                     "{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
-                    "-8,0581" +"\",\"centerLongitude\": \"" +"-34,8839" +"\",\"radius\": \"30\"}}}]}}";
+                    pLatitude +"\",\"centerLongitude\": \"" +pLongitude +"\",\"radius\": \"2000\"}}}]}}";
             OkHttpClient client = new OkHttpClient();
             RequestBody body = RequestBody.create(JSON, getAll);
             Request request = new Request.Builder()
@@ -207,5 +152,4 @@ public class RemoteRepositoryController {
         return json;
 
     }
-
 }

@@ -266,6 +266,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 			case R.id.menu_history:
 				fragmentClass = HistoryActivity.class;
 				break;
+			case R.id.menu_heatmap:
+				fragmentClass = HeatMapActivity.class;
+				break;
+			case R.id.menu_cluster:
+				fragmentClass = ClusterMapDisplayActivity.class;
+				break;
 			default:
 				fragmentClass = HistoryActivity.class;
 		}
