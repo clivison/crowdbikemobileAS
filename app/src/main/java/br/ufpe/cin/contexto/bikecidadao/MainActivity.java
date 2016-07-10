@@ -1120,7 +1120,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 				chronometer.start();
 				drawPolyline(points);
 			}else{
-                timeWhenStopped = chronometer.getBase() - timeWhenStopped;
+                timeWhenStopped = chronometer.getBase() - SystemClock.elapsedRealtime();
                 chronometer.stop();
             }
 		}
@@ -1132,7 +1132,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	}
 
     public boolean onBike() {
-        return localRepositoryController.onBike();
+        boolean status = localRepositoryController.onBike();
+
+        if ( status ) {
+            LocationTrackerService.updateNotificationText(getString(R.string.tracking_notification_title), getString(R.string.tracking_notification_text));
+        }else{
+            LocationTrackerService.updateNotificationText("Aguardando Atividade", localRepositoryController.getActivityStatus());
+        }
+
+        return status;
     }
 
 

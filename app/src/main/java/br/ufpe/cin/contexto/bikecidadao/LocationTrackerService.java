@@ -31,8 +31,9 @@ import br.ufpe.cin.util.bikecidadao.Constants;
 
 public class LocationTrackerService extends Service implements LocationListener, ConnectionCallbacks{
 
-    private NotificationManager mNotificationManager;
-    private NotificationCompat.Builder mNotificationBuilder;
+
+    private static NotificationManager mNotificationManager;
+    private static NotificationCompat.Builder mNotificationBuilder;
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
@@ -140,6 +141,17 @@ public class LocationTrackerService extends Service implements LocationListener,
         mBuilder.setContentIntent(resultPendingIntent);
 
         return mBuilder;
+    }
+
+    public static void updateNotificationText(String title, String text){
+//        NotificationCompat.Builder mBuilder =
+//                new NotificationCompat.Builder(LocationTrackerService.this)
+//                        .setSmallIcon(R.drawable.ic_directions_bike_white_48dp)
+//                        .setContentTitle(getString(title))
+//                        .setContentText(getString(text))
+//                        .setOngoing(true);
+        mNotificationBuilder.setContentText(text).setContentTitle(title);
+        mNotificationManager.notify(Constants.TRACKING_SERVICE_NOTIFICATION_ID, mNotificationBuilder.build());
     }
 
     @Override
