@@ -1,6 +1,5 @@
 package br.ufpe.cin.contexto.bikecidadao;
 
-
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -10,7 +9,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
-
 
 import com.example.bikecidadao.R;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -26,6 +24,7 @@ import java.util.ArrayList;
 
 
 import br.ufpe.cin.db.bikecidadao.LocalRepositoryController;
+import br.ufpe.cin.db.bikecidadao.RemoteRepositoryController;
 import br.ufpe.cin.db.bikecidadao.model.GeoLocation;
 import br.ufpe.cin.db.bikecidadao.model.TrackInfo;
 import br.ufpe.cin.util.bikecidadao.Constants;
@@ -43,8 +42,8 @@ public class LocationTrackerService extends Service implements LocationListener,
     private long startTime;
     private long elapsedTime;
 
-    //mili * sec * minute
-    //1000 * 60 * 1
+                                        //mili * sec * minute
+                                        //1000 * 60 * 1
     private static final long INTERVAL = 1000 * 4;
     private static final long FASTEST_INTERVAL = 1000 * 2;
     private static final long SMALLEST_DISPLACEMENT = 10;
@@ -57,6 +56,7 @@ public class LocationTrackerService extends Service implements LocationListener,
     Intent loggingIntent;
 
     private LocalRepositoryController localRepositoryController;
+    private RemoteRepositoryController remoteRepositoryController;
 
     private Gson gson;
     private Location startLocation;
@@ -79,6 +79,7 @@ public class LocationTrackerService extends Service implements LocationListener,
 
     private void initVariables(){
         localRepositoryController = new LocalRepositoryController(this);
+        remoteRepositoryController = new RemoteRepositoryController(this);
         gson = new Gson();
         loggingIntent = new Intent(BROADCAST_ACTION);
     }
@@ -113,6 +114,7 @@ public class LocationTrackerService extends Service implements LocationListener,
         mNotificationBuilder = initNotificationBuilder();
         mNotificationManager = (NotificationManager) getSystemService(getApplicationContext().NOTIFICATION_SERVICE);
         startForeground(Constants.TRACKING_SERVICE_NOTIFICATION_ID, mNotificationBuilder.build());
+
     }
 
     private NotificationCompat.Builder initNotificationBuilder() {
@@ -272,6 +274,9 @@ public class LocationTrackerService extends Service implements LocationListener,
         TrackInfo trackInfo = new TrackInfo(getStartTime(), System.currentTimeMillis(), distance);
         trackInfo.setTrackingPoints(trackingPoints);
         localRepositoryController.saveTmpTracking(trackInfo);
+        remoteRepositoryController.saveTracking(trackInfo);
+
+
     }
 
     private void startResultsActivity(){

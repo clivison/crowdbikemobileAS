@@ -182,11 +182,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	private DrawerLayout mDrawerLayout;
 	private NavigationView nvDrawer;
 	private ActionBarDrawerToggle mDrawerToggle;
-	/**
-	 * ATTENTION: This was auto-generated to implement the App Indexing API.
-	 * See https://g.co/AppIndexing/AndroidStudio for more information.
-	 */
-	private GoogleApiClient client2;
 
 
 	@Override
@@ -257,9 +252,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		}
 
 		resumeTrackingStatus();
-		// ATTENTION: This was auto-generated to implement the App Indexing API.
-		// See https://g.co/AppIndexing/AndroidStudio for more information.
-		client2 = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
 	}
 
 	private void setupDrawerContent(NavigationView navigationView) {
@@ -280,6 +273,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 			case R.id.menu_history:
 				fragmentClass = HistoryActivity.class;
 				break;
+			case R.id.menu_heatmap:
+				fragmentClass = HeatMapActivity.class;
+				break;
+			case R.id.menu_cluster:
+				fragmentClass = ClusterMapActivity.class;
+				break;
 			default:
 				fragmentClass = HistoryActivity.class;
 		}
@@ -290,7 +289,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		menuItem.setChecked(false);
 		mDrawerLayout.closeDrawers();
 	}
-
 	private ActionBarDrawerToggle setupDrawerToggle() {
 		return new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close);
 	}
@@ -332,7 +330,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		super.onPostCreate(savedInstanceState);
 		mDrawerToggle.syncState();
 	}
-
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
@@ -395,44 +392,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	@Override
 	protected void onStop() {
 		super.onStop();
-		// ATTENTION: This was auto-generated to implement the App Indexing API.
-		// See https://g.co/AppIndexing/AndroidStudio for more information.
-		Action viewAction = Action.newAction(
-				Action.TYPE_VIEW, // TODO: choose an action type.
-				"Main Page", // TODO: Define a title for the content shown.
-				// TODO: If you have web page content that matches this app activity's content,
-				// make sure this auto-generated web page URL is correct.
-				// Otherwise, set the URL to null.
-				Uri.parse("http://host/path"),
-				// TODO: Make sure this auto-generated app URL is correct.
-				Uri.parse("android-app://br.ufpe.cin.contexto.bikecidadao/http/host/path")
-		);
-		AppIndex.AppIndexApi.end(client2, viewAction);
-		// ATTENTION: This was auto-generated to implement the App Indexing API.
-		// See https://g.co/AppIndexing/AndroidStudio for more information.
-		client2.disconnect();
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
-		// ATTENTION: This was auto-generated to implement the App Indexing API.
-		// See https://g.co/AppIndexing/AndroidStudio for more information.
-		client2.connect();
 		threadsAlive = true;
-		// ATTENTION: This was auto-generated to implement the App Indexing API.
-		// See https://g.co/AppIndexing/AndroidStudio for more information.
-		Action viewAction = Action.newAction(
-				Action.TYPE_VIEW, // TODO: choose an action type.
-				"Main Page", // TODO: Define a title for the content shown.
-				// TODO: If you have web page content that matches this app activity's content,
-				// make sure this auto-generated web page URL is correct.
-				// Otherwise, set the URL to null.
-				Uri.parse("http://host/path"),
-				// TODO: Make sure this auto-generated app URL is correct.
-				Uri.parse("android-app://br.ufpe.cin.contexto.bikecidadao/http/host/path")
-		);
-		AppIndex.AppIndexApi.start(client2, viewAction);
+
 	}
 
 	@Override
@@ -574,14 +540,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	public class DoSomethingThread extends Thread {
 
 		private static final String TAG = "DoSomethingThread";
-
 		@Override
 		public void run() {
 			Log.v(TAG, "doing work in Random Number Thread");
 			while (true) {
 				try {
 					publishProgress(fiwareRequest());
-                    sleep(5000);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -613,10 +577,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 		BufferedReader rd;
 		try {
-			String uri = "http://148.6.80.19:1026/v1/queryContext";
-			String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
-					"{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
-					latitudeString + "\",\"centerLongitude\": \"" + longitudeString + "\",\"radius\": \"30\"}}}]}}";
+			String uri = "http://130.206.112.159:1026/v1/queryContext";
+            String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
+                    "{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
+                    latitudeString +"\",\"centerLongitude\": \"" +longitudeString +"\",\"radius\": \"30\"}}}]}}";
 			OkHttpClient client = new OkHttpClient();
 			RequestBody body = RequestBody.create(JSON, getAll);
 			Request request = new Request.Builder()
@@ -916,7 +880,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		// Calorie in kcal
 		totalCalorias = totalCalorias + vo2 * durationMin * WEIGHT
 				* KGM_TO_KCAL;
-		;
 
 		// Toast.makeText(this, "calorias: " + totalCalorias,
 		// Toast.LENGTH_LONG).show();
@@ -1186,9 +1149,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		double path = SphericalUtil.computeLength(points);
 		//	if((path/timeDelta)>17) return false;
 
-		if (accuracy < 15) return true;
+		return accuracy < 15;
 
-		return false;
 	}
 
 	public double getAverageSpeed() {
@@ -1252,16 +1214,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		Gson gson = new Gson();
 
 
-		String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
-		String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
-		OkHttpClient client = new OkHttpClient();
-		try {
-			RequestBody body = RequestBody.create(JSON, getAll);
-			Request request = new Request.Builder()
-					.url(uri)
-					.post(body)
-					.addHeader("Accept", "application/json")
-					.build();
+        String uri = "http://130.206.112.159:1026/v1/queryContext?limit=500&details=on";
+        String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
+        OkHttpClient client = new OkHttpClient();
+        try
+        {
+            RequestBody body = RequestBody.create(JSON, getAll);
+            Request request = new Request.Builder()
+                    .url(uri)
+                    .post(body)
+                    .addHeader("Accept","application/json")
+                    .build();
 
 			int executeCount = 0;
 			Response response;

@@ -11,7 +11,6 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -73,6 +72,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
 	private Location mLastLocation;
     private GoogleMap googleMap;
 
+
 	public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
 	public Intent intent;
@@ -110,6 +110,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
         if(!ConnectivityUtil.isNetworkAvaiable(this)){
             Toast.makeText(getApplicationContext(), getText(R.string.no_network_avaible), Toast.LENGTH_LONG).show();
         }
+
 	}
 
 //    public void setStartButton(){
@@ -303,7 +304,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
 		entity.setAttributes(attributes);
 
 		Gson gson = new Gson();
-		String uri = "http://148.6.80.19:1026/v1/contextEntities/";
+		String uri = "http://130.206.112.159:1026/v1/contextEntities/";
 		uri += id;
 
 		try
@@ -323,6 +324,12 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
             if( response.code()==200){
                 result = selectedOccurence+"";
             }
+
+            /*String str1 = response.toString();
+            String str2 = gson.toJson(entity);
+            String str3 = request.toString();
+
+            System.out.println(str1);*/
 
 		}
 		catch(IOException e)
@@ -359,7 +366,7 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
         Gson gson = new Gson();
 
 
-        String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
+        String uri = "http://130.206.112.159:1026/v1/queryContext?limit=500&details=on";
         String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
         OkHttpClient client = new OkHttpClient();
         try
@@ -613,16 +620,13 @@ public class MapDisplayActivity extends AppCompatActivity implements LocationLis
     }
 
 
-
-
-
     public String removeMarker(Marker marker) throws JSONException {
         String result = null;
         String line = "";
         String id =  markers.get(marker.getId());// pegar id do objeto marcador---------------------------------
 
         Gson gson = new Gson();
-        String uri = "http://148.6.80.19:1026/v1/contextEntities/";
+        String uri = "http://130.206.112.159:1026/v1/contextEntities/";
         uri += id;
 
         try
