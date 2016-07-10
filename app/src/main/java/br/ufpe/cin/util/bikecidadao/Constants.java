@@ -16,6 +16,8 @@ public class Constants {
 
     public static final String SHARED_TRACKINGS_HISTORY_NAME = PACKAGE_NAME+ ".SHARED_TRACKINGS_HISTORY_NAME";
 
+    public static final String ACTIVITY_SERVICE_STATUS_KEY = "ACTIVITY_STATUS_KEY";
+    public static final String ACTIVITY_SERVICE_STATUS_VALUE = "ACTIVITY_STATUS_VALUE";
 
 
 

@@ -1,5 +1,6 @@
 package br.ufpe.cin.contexto.bikecidadao;
 
+
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -10,18 +11,19 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 
+
 import com.example.bikecidadao.R;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.*;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.location.ActivityRecognition;
+
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
-import com.google.maps.android.SphericalUtil;
 
 import java.util.ArrayList;
-import java.util.List;
+
 
 import br.ufpe.cin.db.bikecidadao.LocalRepositoryController;
 import br.ufpe.cin.db.bikecidadao.model.GeoLocation;
@@ -41,8 +43,8 @@ public class LocationTrackerService extends Service implements LocationListener,
     private long startTime;
     private long elapsedTime;
 
-                                        //mili * sec * minute
-                                        //1000 * 60 * 1
+    //mili * sec * minute
+    //1000 * 60 * 1
     private static final long INTERVAL = 1000 * 4;
     private static final long FASTEST_INTERVAL = 1000 * 2;
     private static final long SMALLEST_DISPLACEMENT = 10;
@@ -111,7 +113,6 @@ public class LocationTrackerService extends Service implements LocationListener,
         mNotificationBuilder = initNotificationBuilder();
         mNotificationManager = (NotificationManager) getSystemService(getApplicationContext().NOTIFICATION_SERVICE);
         startForeground(Constants.TRACKING_SERVICE_NOTIFICATION_ID, mNotificationBuilder.build());
-
     }
 
     private NotificationCompat.Builder initNotificationBuilder() {

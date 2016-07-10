@@ -2,10 +2,8 @@ package br.ufpe.cin.contexto.bikecidadao;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
@@ -13,13 +11,12 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StrictMode;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.support.design.widget.NavigationView;
 import android.support.v4.content.ContextCompat;
@@ -30,7 +27,6 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
-import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -49,8 +45,12 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.example.bikecidadao.R;
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -105,13 +105,13 @@ import br.ufpe.cin.util.bikecidadao.PermissionRequest;
 @SuppressLint("NewApi")
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
 		GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback,
-        LocationListener, OnClickListener , OnGetOccurrencesCompletedCallback{
-    public static final String[] OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização ruim", "Via danificada"};
-    private GoogleMap googleMap;
-    private HashMap<String,String> markers;
+		LocationListener, OnClickListener, OnGetOccurrencesCompletedCallback {
+	public static final String[] OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização ruim", "Via danificada"};
+	private GoogleMap googleMap;
+	private HashMap<String, String> markers;
 
 
-    private String latitudeString = "";
+	private String latitudeString = "";
 	private String longitudeString = "";
 	private Tempo tempoLocal = new Tempo();
 	private int bgColor = 0;
@@ -164,16 +164,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 	private String registered = "";
 
-    private Intent trackingIntent;
+	private Intent trackingIntent;
+    private Intent activityIntent;
 
-
-    private GoogleApiClient mGoogleApiClient;
+	public GoogleApiClient mGoogleApiClient;
 	private LocationRequest mLocationRequest;
 	private Location mLastLocation;
 	public boolean threadsAlive = false;
 	Chronometer chronometer;
 	long startTime;
-    boolean mBroadcastIsRegistered = false;
+    long timeWhenStopped = 0;
+	boolean mBroadcastIsRegistered = false;
 
 	private LocalRepositoryController localRepositoryController;
 
@@ -181,30 +182,36 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	private DrawerLayout mDrawerLayout;
 	private NavigationView nvDrawer;
 	private ActionBarDrawerToggle mDrawerToggle;
+	/**
+	 * ATTENTION: This was auto-generated to implement the App Indexing API.
+	 * See https://g.co/AppIndexing/AndroidStudio for more information.
+	 */
+	private GoogleApiClient client2;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+		super.onCreate(savedInstanceState);
 
 		trackingIntent = new Intent(this, LocationTrackerService.class);
+        activityIntent = new Intent(this, DetectActivity.class);
 		localRepositoryController = new LocalRepositoryController(this);
 		setContentView(R.layout.activity_main);
 
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        markers = new HashMap<String,String>();
+		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+				.findFragmentById(R.id.map);
+		mapFragment.getMapAsync(this);
+		markers = new HashMap<String, String>();
 
 		txtMensagem = (TextView) findViewById(R.id.txtMensagem);
 
 		TTS = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
 			@Override
-			public void onInit(int status){
+			public void onInit(int status) {
 			}
 		});
 
-        setToggleVoiceAlert();
+		setToggleVoiceAlert();
 
 		// Setando a cor de fundo. Padrao: branco
 		setarCorDeFundo(R.color.branco);
@@ -228,13 +235,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 			}
 		};
 
-		if(!ConnectivityUtil.isNetworkAvaiable(this)){
+		if (!ConnectivityUtil.isNetworkAvaiable(this)) {
 			Toast.makeText(getApplicationContext(), getText(R.string.no_network_avaible), Toast.LENGTH_LONG).show();
 		}
 		chronometer = (Chronometer) findViewById(R.id.chronometer);
-        Button startButton = (Button)findViewById(R.id.start_button);
-        startButton.setOnClickListener(this);
-
+		Button startButton = (Button) findViewById(R.id.start_button);
+		startButton.setOnClickListener(this);
 
 
 		toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -246,28 +252,31 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		setupDrawerContent(nvDrawer);
 		mDrawerLayout.setDrawerListener(mDrawerToggle);
 
-        if(!LocationUtil.isGPSEnabled(this)){
-            LocationUtil.showEnableGPSDialog(this);
-        }
+		if (!LocationUtil.isGPSEnabled(this)) {
+			LocationUtil.showEnableGPSDialog(this);
+		}
 
-        resumeTrackingStatus();
+		resumeTrackingStatus();
+		// ATTENTION: This was auto-generated to implement the App Indexing API.
+		// See https://g.co/AppIndexing/AndroidStudio for more information.
+		client2 = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 	}
 
 	private void setupDrawerContent(NavigationView navigationView) {
 		navigationView.setNavigationItemSelectedListener(
-                new NavigationView.OnNavigationItemSelectedListener() {
-                    @Override
-                    public boolean onNavigationItemSelected(MenuItem menuItem) {
-                        selectDrawerItem(menuItem);
-                        return true;
-                    }
-                });
+				new NavigationView.OnNavigationItemSelectedListener() {
+					@Override
+					public boolean onNavigationItemSelected(MenuItem menuItem) {
+						selectDrawerItem(menuItem);
+						return true;
+					}
+				});
 	}
 
 	public void selectDrawerItem(MenuItem menuItem) {
 
 		Class fragmentClass;
-		switch(menuItem.getItemId()) {
+		switch (menuItem.getItemId()) {
 			case R.id.menu_history:
 				fragmentClass = HistoryActivity.class;
 				break;
@@ -281,47 +290,49 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		menuItem.setChecked(false);
 		mDrawerLayout.closeDrawers();
 	}
+
 	private ActionBarDrawerToggle setupDrawerToggle() {
-		return new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.drawer_open,  R.string.drawer_close);
+		return new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close);
 	}
 
 
 	@Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu items for use in the action bar
-        // Inflate the menu items for use in the action bar
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.main_activity_actions, menu);
-        return super.onCreateOptionsMenu(menu);
-    }
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu items for use in the action bar
+		// Inflate the menu items for use in the action bar
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.main_activity_actions, menu);
+		return super.onCreateOptionsMenu(menu);
+	}
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
 		if (mDrawerToggle.onOptionsItemSelected(item)) {
 			return true;
 		}
-			// Handle presses on the action bar items
+		// Handle presses on the action bar items
 		threadsAlive = false;
-		if(mGoogleApiClient != null){
+		if (mGoogleApiClient != null) {
 			stopLocationUpdate();
 		}
-        switch (item.getItemId()) {
-            case R.id.view_map_action:
-                displayMapActivity();
-                return true;
+		switch (item.getItemId()) {
+			case R.id.view_map_action:
+				displayMapActivity();
+				return true;
 			case android.R.id.home:
 				mDrawerLayout.openDrawer(GravityCompat.START);
 				return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
 
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		mDrawerToggle.syncState();
 	}
+
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
@@ -329,67 +340,99 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		mDrawerToggle.onConfigurationChanged(newConfig);
 	}
 
-    @Override
-    public void onMapReady(GoogleMap map) {
-        this.googleMap = map;
+	@Override
+	public void onMapReady(GoogleMap map) {
+		this.googleMap = map;
 
-        //this.googleMap.setOnMapLongClickListener(this);
-        if(PermissionRequest.checkLocationPermission(this)){
-            googleMap.setMyLocationEnabled(true);
-        }else{
-            PermissionRequest.requestLocationPermission(this);
-        }
-        this.googleMap.setBuildingsEnabled(true);
-        this.googleMap.getUiSettings().setZoomControlsEnabled(true);
+		//this.googleMap.setOnMapLongClickListener(this);
+		if (PermissionRequest.checkLocationPermission(this)) {
+			googleMap.setMyLocationEnabled(true);
+		} else {
+			PermissionRequest.requestLocationPermission(this);
+		}
+		this.googleMap.setBuildingsEnabled(true);
+		this.googleMap.getUiSettings().setZoomControlsEnabled(true);
 
-        try {
-            AsyncGetOcurrences asyncGetOcurrences = new AsyncGetOcurrences(MainActivity.this);
+		try {
+			AsyncGetOcurrences asyncGetOcurrences = new AsyncGetOcurrences(MainActivity.this);
 			asyncGetOcurrences.execute();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-    }
+	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
 		mGoogleApiClient.disconnect();
 
-        if (mBroadcastIsRegistered) {
-            unregisterReceiver(broadcastReceiver);
-            mBroadcastIsRegistered = false;
-        }
+		if (mBroadcastIsRegistered) {
+			unregisterReceiver(broadcastReceiver);
+			mBroadcastIsRegistered = false;
+		}
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
 		mGoogleApiClient.connect();
-		if(mGoogleApiClient !=null && mGoogleApiClient.isConnected()){
+		if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
 			startLocationUpdate();
 		}
 		firstForecast = true;
 
-        if (!mBroadcastIsRegistered) {
-            registerReceiver(broadcastReceiver, new IntentFilter(
-                    LocationTrackerService.BROADCAST_ACTION));
-            mBroadcastIsRegistered = true;
-        }
+		if (!mBroadcastIsRegistered) {
+			registerReceiver(broadcastReceiver, new IntentFilter(
+					LocationTrackerService.BROADCAST_ACTION));
+			mBroadcastIsRegistered = true;
+		}
 
-        resumeTrackingStatus();
+		resumeTrackingStatus();
 	}
 
 
 	@Override
-	protected void onStop(){
+	protected void onStop() {
 		super.onStop();
+		// ATTENTION: This was auto-generated to implement the App Indexing API.
+		// See https://g.co/AppIndexing/AndroidStudio for more information.
+		Action viewAction = Action.newAction(
+				Action.TYPE_VIEW, // TODO: choose an action type.
+				"Main Page", // TODO: Define a title for the content shown.
+				// TODO: If you have web page content that matches this app activity's content,
+				// make sure this auto-generated web page URL is correct.
+				// Otherwise, set the URL to null.
+				Uri.parse("http://host/path"),
+				// TODO: Make sure this auto-generated app URL is correct.
+				Uri.parse("android-app://br.ufpe.cin.contexto.bikecidadao/http/host/path")
+		);
+		AppIndex.AppIndexApi.end(client2, viewAction);
+		// ATTENTION: This was auto-generated to implement the App Indexing API.
+		// See https://g.co/AppIndexing/AndroidStudio for more information.
+		client2.disconnect();
 	}
 
 	@Override
-	protected void onStart(){
+	protected void onStart() {
 		super.onStart();
+		// ATTENTION: This was auto-generated to implement the App Indexing API.
+		// See https://g.co/AppIndexing/AndroidStudio for more information.
+		client2.connect();
 		threadsAlive = true;
+		// ATTENTION: This was auto-generated to implement the App Indexing API.
+		// See https://g.co/AppIndexing/AndroidStudio for more information.
+		Action viewAction = Action.newAction(
+				Action.TYPE_VIEW, // TODO: choose an action type.
+				"Main Page", // TODO: Define a title for the content shown.
+				// TODO: If you have web page content that matches this app activity's content,
+				// make sure this auto-generated web page URL is correct.
+				// Otherwise, set the URL to null.
+				Uri.parse("http://host/path"),
+				// TODO: Make sure this auto-generated app URL is correct.
+				Uri.parse("android-app://br.ufpe.cin.contexto.bikecidadao/http/host/path")
+		);
+		AppIndex.AppIndexApi.start(client2, viewAction);
 	}
 
 	@Override
@@ -408,7 +451,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		cardView.setCardBackgroundColor(Color.parseColor(stringColor));
 	}
 
-	public void displayMapActivity(){
+	public void displayMapActivity() {
 		Intent intent = new Intent(this, MapDisplayActivity.class);
 		startActivity(intent);
 	}
@@ -426,80 +469,89 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 	@Override
 	public void onClick(View view) {
-		switch (view.getId()){
+		switch (view.getId()) {
 
-		case R.id.start_button:
+			case R.id.start_button:
 
-            boolean isTracking = isTracking();
+				boolean isTracking = isTracking();
 
-            if(isTracking){ //then stop and show start button
-				stopTrackingService();
-			}else{
+				if (isTracking) { //then stop and show start button
+					stopTrackingService();
+                    stopService(activityIntent);
+				} else {
 
-				if(LocationUtil.isGPSEnabled(this) && getLastLocation()!=null){
-                    startTrackingService();
-                }else{
-                    LocationUtil.showEnableGPSDialog(this);
-                }
-            }
-			break;
+					if (LocationUtil.isGPSEnabled(this) && getLastLocation() != null) {
+                        startDetectActivityService();
+						startTrackingService();
+					} else {
+						LocationUtil.showEnableGPSDialog(this);
+					}
+				}
+				break;
 		}
 	}
 
 	// true if it's tracking, otherwise false
-	public void setStartButtonState(boolean isTracking){
+	public void setStartButtonState(boolean isTracking) {
 		Button startButton = (Button) findViewById(R.id.start_button);
-		if(isTracking) {
+		if (isTracking) {
 			ViewCompat.setBackgroundTintList(startButton, ContextCompat.getColorStateList(getApplicationContext(), R.color.red_smooth));
 			startButton.setText(getResources().getText(R.string.stop_run));
-		}else{
+		} else {
 			ViewCompat.setBackgroundTintList(startButton, ContextCompat.getColorStateList(getApplicationContext(), R.color.green_smooth));
 			startButton.setText(getResources().getText(R.string.start_run));
 		}
 	}
 
-    public long getRunElapsedTime(){
-		long elapsed = (System.currentTimeMillis()-localRepositoryController.getStartTime());
+	public long getRunElapsedTime() {
+		long elapsed = (System.currentTimeMillis() - localRepositoryController.getStartTime());
 		return SystemClock.elapsedRealtime() - elapsed;
+	}
+
+    private void startDetectActivityService(){
+        startService(activityIntent);
     }
 
 	private void startTrackingService() {
-        Location location = getLastLocation();
-        if(location!=null && location.getAccuracy()<30){
-            trackingIntent.putExtra("startLocation", location);
-            setStartButtonState(true);
-            startService(trackingIntent);
-            registerReceiver(broadcastReceiver, new IntentFilter(
-                    LocationTrackerService.BROADCAST_ACTION));
-            mBroadcastIsRegistered = true;
-        }else{
-            Toast.makeText(this, R.string.low_accuracy_gps, Toast.LENGTH_SHORT).show();
-        }
+		Location location = getLastLocation();
+		if (location != null && location.getAccuracy() < 30) {
+			trackingIntent.putExtra("startLocation", location);
+			setStartButtonState(true);
+			startService(trackingIntent);
+			registerReceiver(broadcastReceiver, new IntentFilter(
+					LocationTrackerService.BROADCAST_ACTION));
+			mBroadcastIsRegistered = true;
+		} else {
+			Toast.makeText(this, R.string.low_accuracy_gps, Toast.LENGTH_SHORT).show();
+		}
 	}
 
-    private void resumeTrackingStatus(){
-        if(isTracking()){
-            setStartButtonState(true);
-        }
-    }
+	private void resumeTrackingStatus() {
+		if (isTracking()) {
+			setStartButtonState(true);
+		}
+	}
 
 	private void stopTrackingService() {
-        setStartButtonState(false);
+		setStartButtonState(false);
 
-        chronometer.setBase(SystemClock.elapsedRealtime());
-        chronometer.stop();
+		chronometer.setBase(SystemClock.elapsedRealtime());
+		chronometer.stop();
+        timeWhenStopped = 0;
 
-        if(polyline !=null) {
-            //greenPoint.remove();
-            polyline.remove();
-            polyline=null;
-            ongoingMarker.remove();
-            startMarker.remove();
-            this.googleMap.setMyLocationEnabled(true);
-        }
+		if (polyline != null) {
+			//greenPoint.remove();
+			polyline.remove();
+			polyline = null;
+			ongoingMarker.remove();
+			startMarker.remove();
+			this.googleMap.setMyLocationEnabled(true);
+		}
 
-        trackingIntent.putExtra(Constants.TRACKING_ACTION, Constants.TRACKING_SERVICE_COMMAND_STOP);
-        stopService(trackingIntent);
+		trackingIntent.putExtra(Constants.TRACKING_ACTION, Constants.TRACKING_SERVICE_COMMAND_STOP);
+		stopService(trackingIntent);
+
+        stopService(activityIntent);
 
 
 		if (mBroadcastIsRegistered) {
@@ -507,27 +559,29 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 			mBroadcastIsRegistered = false;
 		}
 
-    }
+	}
 
-	private void drawStartPoint(Location startLocation){
-        greenPoint = googleMap.addCircle(new CircleOptions()
-                .center(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()))
-                .radius(2)
-                .strokeColor(ContextCompat.getColor(getApplicationContext(), R.color.green_smooth))
-                .fillColor(ContextCompat.getColor(getApplicationContext(), R.color.green_smooth))
-                .strokeWidth(16)
-                .zIndex(2));
-    }
+	private void drawStartPoint(Location startLocation) {
+		greenPoint = googleMap.addCircle(new CircleOptions()
+				.center(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()))
+				.radius(2)
+				.strokeColor(ContextCompat.getColor(getApplicationContext(), R.color.green_smooth))
+				.fillColor(ContextCompat.getColor(getApplicationContext(), R.color.green_smooth))
+				.strokeWidth(16)
+				.zIndex(2));
+	}
 
 	public class DoSomethingThread extends Thread {
 
 		private static final String TAG = "DoSomethingThread";
+
 		@Override
 		public void run() {
 			Log.v(TAG, "doing work in Random Number Thread");
 			while (true) {
 				try {
 					publishProgress(fiwareRequest());
+                    sleep(5000);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -554,35 +608,34 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	public String fiwareRequest() throws Exception {
 		int responseCode = 0;
 		String json = "";
-        String result= "";
+		String result = "";
 		String line = "";
 
 		BufferedReader rd;
 		try {
 			String uri = "http://148.6.80.19:1026/v1/queryContext";
-            String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
-                    "{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
-                    latitudeString +"\",\"centerLongitude\": \"" +longitudeString +"\",\"radius\": \"30\"}}}]}}";
+			String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}],\"restriction\": " +
+					"{\"scopes\": [{\"type\" : \"FIWARE::Location\",\"value\" : {\"circle\": {\"centerLatitude\": \"" +
+					latitudeString + "\",\"centerLongitude\": \"" + longitudeString + "\",\"radius\": \"30\"}}}]}}";
 			OkHttpClient client = new OkHttpClient();
 			RequestBody body = RequestBody.create(JSON, getAll);
-            Request request = new Request.Builder()
-                    .url(uri)
-                    .post(body)
-                    .addHeader("Accept", "application/json")
-                    .build();
+			Request request = new Request.Builder()
+					.url(uri)
+					.post(body)
+					.addHeader("Accept", "application/json")
+					.build();
 
-            Response response;
+			Response response;
 
-            int executeCount = 0;
-            do
-            {
-                response = client.newCall(request).execute();
-                executeCount++;
-            }
-            while(response.code() == 408 && executeCount < 5);
+			int executeCount = 0;
+			do {
+				response = client.newCall(request).execute();
+				executeCount++;
+			}
+			while (response.code() == 408 && executeCount < 5);
 
-            result = response.body().string();
-            json = new JSONObject(result).toString();
+			result = response.body().string();
+			json = new JSONObject(result).toString();
 
 		} catch (Exception e) {
 			responseCode = 408;
@@ -593,17 +646,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	}
 
 	public void tarefaParalelaTempo() {
-			// Instanciando a asynktask para contato com o servi?o de tempo
+		// Instanciando a asynktask para contato com o servi?o de tempo
 
 		tempo = new AsyncTempo(MainActivity.this);
 		tempo.execute(latitudeString, longitudeString);
-		if(firstForecast){
-            firstForecast = false;
-        }
+		if (firstForecast) {
+			firstForecast = false;
+		}
 
-    }
-
-
+	}
 
 
 	public void retornoServidorFiware(String retorno) throws Exception {
@@ -611,23 +662,23 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		String noValues = "{\"errorCode\":{\"code\":\"404\",\"reasonPhrase\":\"No context element found\"}}";
 		if (!retorno.equals(noValues) && !retorno.equals("")) {
 			String distance = getDistanceLocation(retorno);
-            Ocorrencia occ = getTipoOcorrencia(retorno);
+			Ocorrencia occ = getTipoOcorrencia(retorno);
 			String title = occ.getTitle();
 			if (distance != null && Double.valueOf(distance) <= 30) {
 
-                setOccurenceCard(occ, distance);
+				setOccurenceCard(occ, distance);
 
 				if (doVoiceAlert) {
 					atual = System.nanoTime();
 					if ((Double.parseDouble(distance) <= 30.0)) {
 						if (first) {
 							anterior = atual;
-							if(threadsAlive) {
+							if (threadsAlive) {
 								notificacaoVoz(title, distance);
 							}
 							first = false;
 						} else if (atual - anterior > 30000000000.0f) {
-							if(threadsAlive) {
+							if (threadsAlive) {
 								notificacaoVoz(title, distance);
 							}
 							anterior = atual;
@@ -638,99 +689,100 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 			Log.v("DIST", distance);
 		} else {
 			txtMensagem.setText("Nenhum alerta");
-            TextView textAlertDetailsView = (TextView) findViewById(R.id.alert_details);
-            textAlertDetailsView.setText("");
-            ImageView iconWeather = (ImageView) findViewById(R.id.alert_img);
-            iconWeather.setImageResource(R.drawable.no_alert);
+			TextView textAlertDetailsView = (TextView) findViewById(R.id.alert_details);
+			textAlertDetailsView.setText("");
+			ImageView iconWeather = (ImageView) findViewById(R.id.alert_img);
+			iconWeather.setImageResource(R.drawable.no_alert);
 			setarCorDeFundo(R.color.branco);
 			setOccurenceCardTextColor(R.color.branco);
 		}
 
 	}
 
-    private void setOccurenceCard(Ocorrencia occ, String distance) {
+	private void setOccurenceCard(Ocorrencia occ, String distance) {
 
-        int occurenceTypeID = occ.getOccurenceCode();
+		int occurenceTypeID = occ.getOccurenceCode();
 		int occurenceColor = getOcurrenceColor(occurenceTypeID);
 
-        setarCorDeFundo(occurenceColor);
+		setarCorDeFundo(occurenceColor);
 
-        ImageView iconWeather = (ImageView) findViewById(R.id.alert_img);
-        iconWeather.setImageResource(getImageViewTypeID(occurenceTypeID));
+		ImageView iconWeather = (ImageView) findViewById(R.id.alert_img);
+		iconWeather.setImageResource(getImageViewTypeID(occurenceTypeID));
 
-        TextView textMessageView = (TextView) findViewById(R.id.txtMensagem);
-        textMessageView.setText(occ.getTitle() + ": " + (int) Double.parseDouble(distance) + "m");
+		TextView textMessageView = (TextView) findViewById(R.id.txtMensagem);
+		textMessageView.setText(occ.getTitle() + ": " + (int) Double.parseDouble(distance) + "m");
 
-        TextView textAlertDetailsView = (TextView) findViewById(R.id.alert_details);
-        textAlertDetailsView.setText("Mantenha-se atento");
+		TextView textAlertDetailsView = (TextView) findViewById(R.id.alert_details);
+		textAlertDetailsView.setText("Mantenha-se atento");
 
 		setOccurenceCardTextColor(occurenceColor);
 
-    }
+	}
 
-	private void setOccurenceCardTextColor(int color){
+	private void setOccurenceCardTextColor(int color) {
 
 		TextView textMessageView = (TextView) findViewById(R.id.txtMensagem);
 		TextView alertDetailsView = (TextView) findViewById(R.id.alert_details);
 
-		if(color==R.color.branco){
+		if (color == R.color.branco) {
 			textMessageView.setTextColor(ContextCompat.getColor(this, R.color.gray_11));
 			alertDetailsView.setTextColor(ContextCompat.getColor(this, R.color.gray_9));
-		}else{
+		} else {
 			textMessageView.setTextColor(ContextCompat.getColor(this, R.color.branco));
 			alertDetailsView.setTextColor(ContextCompat.getColor(this, R.color.gray_1));
 		}
 
 	}
-    private int getOcurrenceColor(int occurenceTypeID){
-        int markColor = R.color.branco;
 
-        switch (occurenceTypeID){
-            case 0:
-                markColor = R.color.red_smooth;
-                break;
-            case 1:
-                markColor = R.color.yellow_smooth;
-                break;
-            case 2:
-                markColor = R.color.yellow_smooth;
-                break;
-            case 3:
-                markColor = R.color.yellow_smooth;
-                break;
-        }
-        return markColor;
-    }
+	private int getOcurrenceColor(int occurenceTypeID) {
+		int markColor = R.color.branco;
 
-    private int getImageViewTypeID(int occurenceTypeID){
-        int markerViewTypeID = R.layout.mark_layout;
+		switch (occurenceTypeID) {
+			case 0:
+				markColor = R.color.red_smooth;
+				break;
+			case 1:
+				markColor = R.color.yellow_smooth;
+				break;
+			case 2:
+				markColor = R.color.yellow_smooth;
+				break;
+			case 3:
+				markColor = R.color.yellow_smooth;
+				break;
+		}
+		return markColor;
+	}
 
-        switch (occurenceTypeID){
-            case 0:
-                markerViewTypeID = R.drawable.mark_accident_spot;
-                break;
-            case 1:
-                markerViewTypeID = R.drawable.mark_heavy_traffic;
-                break;
-            case 2:
-                markerViewTypeID = R.drawable.mark_bad_sinalization;
-                break;
-            case 3:
-                markerViewTypeID = R.drawable.mark_rout_damaged;
-                break;
-        }
-        return markerViewTypeID;
-    }
+	private int getImageViewTypeID(int occurenceTypeID) {
+		int markerViewTypeID = R.layout.mark_layout;
 
-    private void notificacaoVoz(String title, String distance){
-        String mensagem = "Alerta: "+title + ((int)Double.parseDouble(distance))
-                + "metros";
-        //definir scopo de quando mandar a mensagem de voz, como identificar quando mandar.
-        TTS.setPitch(1); // Afina??o da Voz
-        TTS.setSpeechRate(1);//Velocidade da Voz
-        TTS.setLanguage(new Locale("pt", "BR"));
-        TTS.speak(mensagem, TextToSpeech.QUEUE_FLUSH, null);
-    }
+		switch (occurenceTypeID) {
+			case 0:
+				markerViewTypeID = R.drawable.mark_accident_spot;
+				break;
+			case 1:
+				markerViewTypeID = R.drawable.mark_heavy_traffic;
+				break;
+			case 2:
+				markerViewTypeID = R.drawable.mark_bad_sinalization;
+				break;
+			case 3:
+				markerViewTypeID = R.drawable.mark_rout_damaged;
+				break;
+		}
+		return markerViewTypeID;
+	}
+
+	private void notificacaoVoz(String title, String distance) {
+		String mensagem = "Alerta: " + title + ((int) Double.parseDouble(distance))
+				+ "metros";
+		//definir scopo de quando mandar a mensagem de voz, como identificar quando mandar.
+		TTS.setPitch(1); // Afina??o da Voz
+		TTS.setSpeechRate(1);//Velocidade da Voz
+		TTS.setLanguage(new Locale("pt", "BR"));
+		TTS.speak(mensagem, TextToSpeech.QUEUE_FLUSH, null);
+	}
 
 	// xherman
 
@@ -763,10 +815,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	public Ocorrencia getTipoOcorrencia(String result) throws Exception {
 		List<Entity> listEntity = AdapterOcurrence.parseListEntity(result);
 		boolean isFirst = true;
-        Ocorrencia occ = new Ocorrencia();
+		Ocorrencia occ = new Ocorrencia();
 		String title = "";
 		for (Entity entity : listEntity) {
-            occ = AdapterOcurrence.toOcurrence(entity);
+			occ = AdapterOcurrence.toOcurrence(entity);
 		}
 		return occ;
 	}
@@ -786,10 +838,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 			// Exibindo o ?cone
 			iconWeather.setImageResource(
-                    tempoLocal.getIcone());
+					tempoLocal.getIcone());
 
 			// Exibindo a temperatura
-			txtTemp.setText(temperatura.toString()+"\u2103");
+			txtTemp.setText(temperatura.toString() + "\u2103");
 
 			// Exibindo ˚C
 			//txtUom.setText("˚C");
@@ -880,7 +932,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	/* :: Esse m?todo calcula a dist?ncia em K, M ou N : */
 	/* ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
 	private double distance(String latitude1, String longitude1,
-			String latitude2, String longitude2, char unit) {
+							String latitude2, String longitude2, char unit) {
 
 		double lat1 = Double.valueOf(latitude1).doubleValue();
 		double lon1 = Double.valueOf(longitude1).doubleValue();
@@ -961,23 +1013,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	}
 
 
-	private synchronized void callConnection(){
+	private synchronized void callConnection() {
 		Log.i("LOG", "UpdateLocationActivity.callConnection()");
 		mGoogleApiClient = new GoogleApiClient.Builder(this)
 				.addOnConnectionFailedListener(this)
 				.addConnectionCallbacks(this)
 				.addApi(LocationServices.API)
+				.addApi(ActivityRecognition.API)
 				.build();
 		mGoogleApiClient.connect();
 	}
 
-										//mili * sec * minute
-										//1000 * 60 * 1
+	//mili * sec * minute
+	//1000 * 60 * 1
 	private static final long INTERVAL = 1000 * 4;
 	private static final long FASTEST_INTERVAL = 1000 * 2;
-    private static final long SMALLEST_DISPLACEMENT = 10;
+	private static final long SMALLEST_DISPLACEMENT = 10;
 
-	private void initLocationRequest(){
+	private void initLocationRequest() {
 		mLocationRequest = new LocationRequest();
 		mLocationRequest.setInterval(INTERVAL);
 		mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
@@ -986,20 +1039,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 	}
 
 
-	private void startLocationUpdate(){
-        if(PermissionRequest.checkLocationPermission(this)){
-            initLocationRequest();
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-        }else{
-            PermissionRequest.requestLocationPermission(this);
-        }
+	private void startLocationUpdate() {
+		if (PermissionRequest.checkLocationPermission(this)) {
+			initLocationRequest();
+			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+		} else {
+			PermissionRequest.requestLocationPermission(this);
+		}
 	}
 
 
-	private void stopLocationUpdate(){
+	private void stopLocationUpdate() {
 		LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
 	}
-
 
 	// LISTENERS
 	@Override
@@ -1008,16 +1060,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 		mLastLocation = getLastLocation(); // PARA JÁ TER UMA COORDENADA PARA O UPDATE FEATURE UTILIZAR
 
-        if(mLastLocation !=null){
-            LatLng currentLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            this.googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16));
+		if (mLastLocation != null) {
+			LatLng currentLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+			this.googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16));
 		}
 
 		startLocationUpdate();
-	}
+    }
 
-	private Location getLastLocation(){
-		if(mGoogleApiClient!=null && mGoogleApiClient.isConnected())
+    private Location getLastLocation() {
+		if (mGoogleApiClient != null && mGoogleApiClient.isConnected())
 			return LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 		return null;
 	}
@@ -1062,7 +1114,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		// setando o momento da coordenada
 		setTimeLastPosition(timePosition);
 
-        if(!latitudeString.equals("")&& !longitudeString.equals("")){
+		if (!latitudeString.equals("") && !longitudeString.equals("")) {
 			atualForecast = System.nanoTime();
 			if (firstForecast) {
 				anteriorForecast = atualForecast;
@@ -1079,214 +1131,220 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 		//updateTracking(loc);
 	}
 
-	String mLastUpdateTime;
+    String mLastUpdateTime;
 	Polyline polyline;
-    Marker startMarker;
-    Marker ongoingMarker;
-    Circle greenPoint;
+	Marker startMarker;
+	Marker ongoingMarker;
+	Circle greenPoint;
 
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent serviceIntent) {
+	private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent serviceIntent) {
 
-            updateTracking(serviceIntent);
-        }
-    };
+			updateTracking(serviceIntent);
+		}
+	};
 
-	private void updateTracking(Intent serviceIntent){
+	private void updateTracking(Intent serviceIntent) {
 		ArrayList<GeoLocation> latLngPoints = serviceIntent.getParcelableArrayListExtra("trackingPoints");
-		if(latLngPoints!=null &&!latLngPoints.isEmpty()) {
+		if (latLngPoints != null && !latLngPoints.isEmpty()) {
 			ArrayList<LatLng> points = new ArrayList<>(latLngPoints.size() + 1);
 			for (GeoLocation point : latLngPoints) {
 				points.add(new LatLng(point.getLatitude(), point.getLongitude()));
 			}
-			if (isTracking()) {
-				chronometer.setBase(getRunElapsedTime());
+			if (isTracking() && onBike()) {
+				chronometer.setBase(SystemClock.elapsedRealtime() + timeWhenStopped);
 				chronometer.start();
 				drawPolyline(points);
-			}
+			}else{
+                timeWhenStopped = chronometer.getBase() - timeWhenStopped;
+                chronometer.stop();
+            }
 		}
 	}
 
-    //TODO refactor to a PreferenceManager class
-	public boolean isTracking(){
+	//TODO refactor to a PreferenceManager class
+	public boolean isTracking() {
 		return localRepositoryController.isTracking();
+	}
+
+    public boolean onBike() {
+        return localRepositoryController.onBike();
     }
 
 
-	private boolean isLocationValid(Location lastLocation, Location nextLocation){
+	private boolean isLocationValid(Location lastLocation, Location nextLocation) {
 		double accuracy = nextLocation.getAccuracy();
-		if(accuracy==0.0) return false; // means there's no accuracy
+		if (accuracy == 0.0) return false; // means there's no accuracy
 
 		double timeDelta = nextLocation.getElapsedRealtimeNanos() - lastLocation.getElapsedRealtimeNanos();
-        timeDelta /= 1e9;
+		timeDelta /= 1e9;
 		List<LatLng> points = new ArrayList<>();
-		points.add( new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+		points.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
 		points.add(new LatLng(nextLocation.getLatitude(), nextLocation.getLongitude()));
 
 		double path = SphericalUtil.computeLength(points);
-	//	if((path/timeDelta)>17) return false;
+		//	if((path/timeDelta)>17) return false;
 
-		if(accuracy<15) return true;
+		if (accuracy < 15) return true;
 
 		return false;
 	}
 
-    public double getAverageSpeed(){
-        return ((int)(SphericalUtil.computeLength(polyline.getPoints()) / ((SystemClock.elapsedRealtime()-chronometer.getBase())/1000))) * 3.6;
-    }
-
-	private void drawPolyline(ArrayList<LatLng> points){
-
-        if (polyline == null) {
-            polyline = googleMap.addPolyline(new PolylineOptions()
-                    .width(8)
-                    .color(ContextCompat.getColor(getApplicationContext(), R.color.red_smooth))
-                    .geodesic(true)
-                    .zIndex(1));
-
-            startMarker = googleMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(points.get(0).latitude, points.get(0).longitude))
-                    .title("Start")
-                    .icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(getMarkerView(R.layout.start_flag_layout))))
-                    .anchor(0.5f, 0.5f));
-            ongoingMarker = googleMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(points.get(0).latitude, points.get(0).longitude))
-                    .title("Ongoing")
-                    .icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(getMarkerView(R.layout.ongoing_flag_layout))))
-                    .anchor(0.5f, 0.5f));
-            this.googleMap.setMyLocationEnabled(false);
-        }
-
-        polyline.setPoints(points);
-        LatLng lastLatLnt = new LatLng(points.get(points.size() - 1).latitude, points.get(points.size() - 1).longitude);
-        ongoingMarker.setPosition(lastLatLnt);
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastLatLnt, 16));
+	public double getAverageSpeed() {
+		return ((int) (SphericalUtil.computeLength(polyline.getPoints()) / ((SystemClock.elapsedRealtime() - chronometer.getBase()) / 1000))) * 3.6;
 	}
 
-    private void setToggleVoiceAlert(){
-        ToggleButton toggle = (ToggleButton) findViewById(R.id.toggle_voice);
-        toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+	private void drawPolyline(ArrayList<LatLng> points) {
+
+		if (polyline == null) {
+			polyline = googleMap.addPolyline(new PolylineOptions()
+					.width(8)
+					.color(ContextCompat.getColor(getApplicationContext(), R.color.red_smooth))
+					.geodesic(true)
+					.zIndex(1));
+
+			startMarker = googleMap.addMarker(new MarkerOptions()
+					.position(new LatLng(points.get(0).latitude, points.get(0).longitude))
+					.title("Start")
+					.icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(getMarkerView(R.layout.start_flag_layout))))
+					.anchor(0.5f, 0.5f));
+			ongoingMarker = googleMap.addMarker(new MarkerOptions()
+					.position(new LatLng(points.get(0).latitude, points.get(0).longitude))
+					.title("Ongoing")
+					.icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(getMarkerView(R.layout.ongoing_flag_layout))))
+					.anchor(0.5f, 0.5f));
+			this.googleMap.setMyLocationEnabled(false);
+		}
+
+		polyline.setPoints(points);
+		LatLng lastLatLnt = new LatLng(points.get(points.size() - 1).latitude, points.get(points.size() - 1).longitude);
+		ongoingMarker.setPosition(lastLatLnt);
+		googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastLatLnt, 16));
+	}
+
+	private void setToggleVoiceAlert() {
+		ToggleButton toggle = (ToggleButton) findViewById(R.id.toggle_voice);
+		toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				doVoiceAlert = isChecked;
 			}
 		});
-    }
+	}
 
 	@Override
-    public void onGetOccurrencesCompleted(List<Ocorrencia> occurrences){
-        if(occurrences!=null){
-            for(Ocorrencia occurrence: occurrences){
+	public void onGetOccurrencesCompleted(List<Ocorrencia> occurrences) {
+		if (occurrences != null) {
+			for (Ocorrencia occurrence : occurrences) {
 
-                LatLng latLng = new LatLng(Double.parseDouble(occurrence.getLat()), Double.parseDouble(occurrence.getLng()));
-                Marker marker = this.addMarker(latLng, occurrence.getOccurenceCode());
-                markers.put(marker.getId(), String.valueOf(occurrence.getIdOcorrencia()));
-            }
-        }
-    }
+				LatLng latLng = new LatLng(Double.parseDouble(occurrence.getLat()), Double.parseDouble(occurrence.getLng()));
+				Marker marker = this.addMarker(latLng, occurrence.getOccurenceCode());
+				markers.put(marker.getId(), String.valueOf(occurrence.getIdOcorrencia()));
+			}
+		}
+	}
 
-    public List<Ocorrencia> getAllOccurrences() throws Exception {
+	public List<Ocorrencia> getAllOccurrences() throws Exception {
 
-        ////////////////
-        String result = "";
-        String line = "";
-        Gson gson = new Gson();
+		////////////////
+		String result = "";
+		String line = "";
+		Gson gson = new Gson();
 
 
-        String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
-        String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
-        OkHttpClient client = new OkHttpClient();
-        try
-        {
-            RequestBody body = RequestBody.create(JSON, getAll);
-            Request request = new Request.Builder()
-                    .url(uri)
-                    .post(body)
-                    .addHeader("Accept","application/json")
-                    .build();
+		String uri = "http://148.6.80.19:1026/v1/queryContext?limit=500&details=on";
+		String getAll = "{\"entities\": [{\"type\": \"Ocurrence\",\"isPattern\": \"true\",\"id\": \".*\"}]}";
+		OkHttpClient client = new OkHttpClient();
+		try {
+			RequestBody body = RequestBody.create(JSON, getAll);
+			Request request = new Request.Builder()
+					.url(uri)
+					.post(body)
+					.addHeader("Accept", "application/json")
+					.build();
 
-            int executeCount = 0;
-            Response response;
+			int executeCount = 0;
+			Response response;
 
-            do
-            {
-                response = client.newCall(request).execute();
-                executeCount++;
-            }
-            while(response.code() == 408 && executeCount < 5);
+			do {
+				response = client.newCall(request).execute();
+				executeCount++;
+			}
+			while (response.code() == 408 && executeCount < 5);
 
-            result = response.body().string();
+			result = response.body().string();
 
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-        }
-        /////////////////////////////////////////
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		/////////////////////////////////////////
 
-        List<Entity> contextElement = AdapterOcurrence.parseListEntity(result);
-        List<Ocorrencia> ocurrences = new ArrayList<Ocorrencia>();
-        for (Entity entity : contextElement) {
-            ocurrences.add(AdapterOcurrence.toOcurrence(entity));
-        }
+		List<Entity> contextElement = AdapterOcurrence.parseListEntity(result);
+		List<Ocorrencia> ocurrences = new ArrayList<Ocorrencia>();
+		for (Entity entity : contextElement) {
+			ocurrences.add(AdapterOcurrence.toOcurrence(entity));
+		}
 
-        // TODO Auto-generated method stub
-        return ocurrences;
-    }
-    public Marker addMarker(LatLng latLng, int occurenceTypeID){
+		// TODO Auto-generated method stub
+		return ocurrences;
+	}
 
-        MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(OCCURRENCES[occurenceTypeID]).icon(BitmapDescriptorFactory.fromBitmap(getBitmapIcon(occurenceTypeID)));
-        return googleMap.addMarker(markerOptions);
-    }
+	public Marker addMarker(LatLng latLng, int occurenceTypeID) {
 
-    public Bitmap getBitmapIcon(int occurenceTypeID){
-        View markerView = getOccurrenceMarkerView(occurenceTypeID);
-        Bitmap markerBmp =  createDrawableFromView(markerView);
-        return markerBmp;
-    }
-	public View getMarkerView(int viewId){
+		MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(OCCURRENCES[occurenceTypeID]).icon(BitmapDescriptorFactory.fromBitmap(getBitmapIcon(occurenceTypeID)));
+		return googleMap.addMarker(markerOptions);
+	}
+
+	public Bitmap getBitmapIcon(int occurenceTypeID) {
+		View markerView = getOccurrenceMarkerView(occurenceTypeID);
+		Bitmap markerBmp = createDrawableFromView(markerView);
+		return markerBmp;
+	}
+
+	public View getMarkerView(int viewId) {
 		View marker = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(viewId, null);
 		return marker;
 	}
-    public View getOccurrenceMarkerView(int occurenceTypeID){
-        //OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização Ruim", "Via danificada"};
+
+	public View getOccurrenceMarkerView(int occurenceTypeID) {
+		//OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização Ruim", "Via danificada"};
 		return getMarkerView(getMarkViewOccurenceTypeID(occurenceTypeID));
-    }
+	}
 
-    public Bitmap createDrawableFromView(View view) {
+	public Bitmap createDrawableFromView(View view) {
 
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        view.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
-        view.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
-        view.buildDrawingCache();
-        Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(), view.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+		DisplayMetrics displayMetrics = new DisplayMetrics();
+		this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+		view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		view.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
+		view.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+		view.buildDrawingCache();
+		Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(), view.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
 
-        Canvas canvas = new Canvas(bitmap);
-        view.draw(canvas);
+		Canvas canvas = new Canvas(bitmap);
+		view.draw(canvas);
 
-        return bitmap;
-    }
+		return bitmap;
+	}
 
-    private int getMarkViewOccurenceTypeID(int occurenceTypeID){
-        int markerViewTypeID = R.layout.mark_layout;
+	private int getMarkViewOccurenceTypeID(int occurenceTypeID) {
+		int markerViewTypeID = R.layout.mark_layout;
 
-        switch (occurenceTypeID){
-            case 0:
-                markerViewTypeID = R.layout.accident_spot;
-                break;
-            case 1:
-                markerViewTypeID = R.layout.heavy_traffic;
-                break;
-            case 2:
-                markerViewTypeID = R.layout.bad_sinalization;
-                break;
-            case 3:
-                markerViewTypeID = R.layout.rout_damaged;
-                break;
-        }
-        return markerViewTypeID;
-    }
+		switch (occurenceTypeID) {
+			case 0:
+				markerViewTypeID = R.layout.accident_spot;
+				break;
+			case 1:
+				markerViewTypeID = R.layout.heavy_traffic;
+				break;
+			case 2:
+				markerViewTypeID = R.layout.bad_sinalization;
+				break;
+			case 3:
+				markerViewTypeID = R.layout.rout_damaged;
+				break;
+		}
+		return markerViewTypeID;
+	}
 
 }

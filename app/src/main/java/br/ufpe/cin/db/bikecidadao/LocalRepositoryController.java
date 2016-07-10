@@ -40,8 +40,28 @@ public class LocalRepositoryController {
         editor.apply();
     }
 
+    public void setOnBike(boolean activity){
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putBoolean(Constants.ACTIVITY_SERVICE_STATUS_KEY, activity);
+        editor.apply();
+    }
+
+    public boolean onBike(){
+        return mSharedPreferences.getBoolean(Constants.ACTIVITY_SERVICE_STATUS_KEY, false);
+    }
+
     public boolean isTracking(){
         return mSharedPreferences.getBoolean(Constants.TRACKING_SERVICE_STATUS_KEY, false);
+    }
+
+    public String getActivityStatus(){
+        return mSharedPreferences.getString(Constants.ACTIVITY_SERVICE_STATUS_VALUE, null);
+    }
+
+    public void setActivity(String activity){
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putString(Constants.ACTIVITY_SERVICE_STATUS_VALUE, activity);
+        editor.apply();
     }
 
     public void saveStartTime(long startTime){
