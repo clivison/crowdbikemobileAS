@@ -71,6 +71,7 @@ public class DetectActivity extends IntentService  implements LocationListener, 
     private void handleDetectedActivities(DetectedActivity mostProbableActivity) {
         Log.v(TAG,"mostProbableActivity: " + mostProbableActivity.toString());
         setActivity(mostProbableActivity.toString());
+        // usando ON_FOOT apenas para facilitar os testes, alterar para ON_BICYCLE na versão final
         if ( mostProbableActivity.getType() == DetectedActivity.ON_FOOT ){
             setOnBike(true);
         }else{
