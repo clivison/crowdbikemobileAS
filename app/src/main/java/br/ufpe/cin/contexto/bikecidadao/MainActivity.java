@@ -270,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 				fragmentClass = HeatMapActivity.class;
 				break;
 			case R.id.menu_cluster:
-				fragmentClass = ClusterMapDisplayActivity.class;
+				fragmentClass = ClusterMapActivity.class;
 				break;
 			default:
 				fragmentClass = HistoryActivity.class;

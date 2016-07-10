@@ -2,7 +2,6 @@ package br.ufpe.cin.db.bikecidadao;
 
 import android.content.Context;
 
-import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
@@ -10,17 +9,12 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import br.ufpe.cin.br.adapter.bikecidadao.AdapterOcurrence;
 import br.ufpe.cin.br.adapter.bikecidadao.Attributes;
 import br.ufpe.cin.br.adapter.bikecidadao.Entity;
 import br.ufpe.cin.br.adapter.bikecidadao.Metadata;
@@ -110,7 +104,7 @@ public class RemoteRepositoryController {
         }
     }
 
-    public String getRoutes(double pLatitude, double pLongitude) throws Exception {
+    /*public String getRoutes(double pLatitude, double pLongitude) throws Exception {
 
         int responseCode = 0;
         String json = "";
@@ -151,5 +145,5 @@ public class RemoteRepositoryController {
 
         return json;
 
-    }
+    }*/
 }

@@ -101,6 +101,10 @@
             android:label="@string/title_activity_heatmap" >
         </activity>
         <activity
+            android:name="br.ufpe.cin.contexto.bikecidadao.ClusterMapActivity"
+            android:label="@string/title_activity_cluster" >
+        </activity>
+        <activity
             android:name="br.ufpe.cin.contexto.bikecidadao.ResultsActivity"
             android:label="@string/title_activity_results"
             android:exported="true">

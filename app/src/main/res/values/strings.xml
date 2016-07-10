@@ -43,7 +43,7 @@
     <string name="menu_heatmap_title" >Mapa de Calor</string>
     <string name="menu_cluster_title" >Visão em Cluster</string>
 
-    <string name="heat_map_tip">Pontos quentes de pedaladas</string>
+    <string name="heat_map_tip">Onde mais a galera pedala!</string>
     <string name="unknow_error">Erros ocorreram...</string>
     <string name="no_routes">Não há informações de rota no local.</string>
 

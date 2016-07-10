@@ -13,7 +13,6 @@ import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import com.example.bikecidadao.R;
 import com.google.android.gms.common.ConnectionResult;
@@ -29,9 +28,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.ClusterManager;
 
-import org.json.JSONException;
-
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 
@@ -43,7 +39,7 @@ import br.ufpe.cin.util.bikecidadao.OnGetOccurrencesCompletedCallback;
 /**
  * Simple activity demonstrating ClusterManager.
  */
-public class ClusterMapDisplayActivity extends AppCompatActivity implements LocationListener, GoogleApiClient.ConnectionCallbacks,
+public class ClusterMapActivity extends AppCompatActivity implements LocationListener, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback, GoogleMap.OnMapLongClickListener, OnGetOccurrencesCompletedCallback {
 
     private ClusterManager<Marcador> mClusterManager;
@@ -61,7 +57,7 @@ public class ClusterMapDisplayActivity extends AppCompatActivity implements Loca
     protected void onCreate(Bundle icicle) {
 
         super.onCreate(icicle);
-        setContentView(R.layout.activity_cluster_map);
+        setContentView(R.layout.activity_clustermap);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         ActionBar actionBar = getSupportActionBar();
@@ -92,7 +88,7 @@ public class ClusterMapDisplayActivity extends AppCompatActivity implements Loca
         this.googleMap.setBuildingsEnabled(true);
         this.googleMap.getUiSettings().setZoomControlsEnabled(true);
         try {
-            AsyncGetOcurrences asyncGetOcurrences = new AsyncGetOcurrences(ClusterMapDisplayActivity.this);
+            AsyncGetOcurrences asyncGetOcurrences = new AsyncGetOcurrences(ClusterMapActivity.this);
             asyncGetOcurrences.execute();
         } catch (Exception e) {
             e.printStackTrace();
