@@ -1,34 +1,24 @@
 package br.ufpe.cin.contexto.bikecidadao;
 
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.location.Location;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.DisplayMetrics;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.example.bikecidadao.R;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.ClusterManager;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import br.ufpe.cin.br.adapter.bikecidadao.Marcador;
@@ -39,160 +29,95 @@ import br.ufpe.cin.util.bikecidadao.OnGetOccurrencesCompletedCallback;
 /**
  * Simple activity demonstrating ClusterManager.
  */
-public class ClusterMapActivity extends AppCompatActivity implements LocationListener, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback, GoogleMap.OnMapLongClickListener, OnGetOccurrencesCompletedCallback {
+public class ClusterMapActivity extends AppCompatActivity
+                                implements OnGetOccurrencesCompletedCallback, OnMapReadyCallback {
 
-    private ClusterManager<Marcador> mClusterManager;
     private GoogleMap googleMap;
-    private GoogleApiClient mGoogleApiClient;
-    private Location mLastLocation;
-    private LatLng currentLatLng;
-
-    public static final String[] OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização ruim", "Via danificada"};
-
-    private HashMap<String,String> markers;
-
+    private ClusterManager<Marcador> mClusterManager;
 
     @Override
-    protected void onCreate(Bundle icicle) {
-
-        super.onCreate(icicle);
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_clustermap);
+        setActivityEnvironment();
+        setUpMap();
+    }
+
+    private void setActivityEnvironment() {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
+    }
 
-        mLastLocation = LocationServices
-                .FusedLocationApi
-                .getLastLocation(mGoogleApiClient);
-
-        if(mLastLocation !=null){
-            currentLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16));
-        }
-
-        this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 10));
-
-        mClusterManager = new ClusterManager<Marcador>(this, this.googleMap);
-        this.googleMap.setOnCameraChangeListener(mClusterManager);
-
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setUpMap();
     }
 
     @Override
     public void onMapReady(GoogleMap map) {
-        // Add a marker in Sydney, Australia, and move the camera.
+
+        if (googleMap != null) {
+            return;
+        }
+
         this.googleMap = map;
+
+        this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-8.05, -34.88), 5));
 
         this.googleMap.setMyLocationEnabled(true);
         this.googleMap.setBuildingsEnabled(true);
         this.googleMap.getUiSettings().setZoomControlsEnabled(true);
+
+        mClusterManager = new ClusterManager<Marcador>(this, this.googleMap);
+        this.googleMap.setOnCameraChangeListener(mClusterManager);
+
         try {
             AsyncGetOcurrences asyncGetOcurrences = new AsyncGetOcurrences(ClusterMapActivity.this);
             asyncGetOcurrences.execute();
         } catch (Exception e) {
-            e.printStackTrace();
+            Toast.makeText(getApplicationContext(), getText(R.string.unknow_error), Toast.LENGTH_LONG).show();
         }
-
     }
 
-
-    @Override
-    public void onConnected(Bundle bundle) {
-
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-
+    private void setUpMap() {
+        ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map)).getMapAsync(this);
     }
 
     @Override
     public void onGetOccurrencesCompleted(List<Ocorrencia> occurrences) {
-        if(occurrences!=null) {
-            for (Ocorrencia occurrence : occurrences) {
 
-                LatLng latLng = new LatLng(Double.parseDouble(occurrence.getLat()), Double.parseDouble(occurrence.getLng()));
-                Marker marker = this.addMarker(latLng, occurrence.getOccurenceCode());
-                markers.put(marker.getId(), String.valueOf(occurrence.getIdOcorrencia()));
+        List<Marcador> list = new ArrayList<>();;
+        Iterator<Ocorrencia> it = null;
+
+        if (occurrences != null) {
+
+            it = occurrences.iterator();
+
+            while (it.hasNext()) {
+                Ocorrencia o = it.next();
+                list.add(new Marcador(new Double(o.getLat()), new Double(o.getLng())));
+
             }
+
+            mClusterManager.addItems(list);
+
+        } else {
+            Toast.makeText(getApplicationContext(), getText(R.string.no_occurences), Toast.LENGTH_LONG).show();
         }
-
-    }
-
-    public Marker addMarker(LatLng latLng, int occurenceTypeID){
-
-        MarkerOptions markerOptions = new MarkerOptions().position(latLng).title(OCCURRENCES[occurenceTypeID]).icon(BitmapDescriptorFactory.fromBitmap(getBitmapIcon(occurenceTypeID)));
-        markerOptions.snippet("Toque aqui para remover marcador");
-        return googleMap.addMarker(markerOptions);
-    }
-
-    public Bitmap getBitmapIcon(int occurenceTypeID){
-        View markerView = getMarkerView(occurenceTypeID);
-        Bitmap markerBmp =  createDrawableFromView(markerView);
-        return markerBmp;
-    }
-
-    public View getMarkerView(int occurenceTypeID){
-        //OCCURRENCES = {"Local de acidente", "Tráfego intenso", "Sinalização Ruim", "Via danificada"};
-
-        View marker = null;
-        int markerViewTypeID = getMarkViewTypeID(occurenceTypeID);
-        marker = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(markerViewTypeID, null);
-        return marker;
-
-    }
-
-    public Bitmap createDrawableFromView(View view) {
-
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        view.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
-        view.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
-        view.buildDrawingCache();
-        Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(), view.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-
-        Canvas canvas = new Canvas(bitmap);
-        view.draw(canvas);
-
-        return bitmap;
-    }
-
-    private int getMarkViewTypeID(int occurenceTypeID){
-        int markerViewTypeID = R.layout.mark_layout;
-
-        switch (occurenceTypeID){
-            case 0:
-                markerViewTypeID = R.layout.accident_spot;
-                break;
-            case 1:
-                markerViewTypeID = R.layout.heavy_traffic;
-                break;
-            case 2:
-                markerViewTypeID = R.layout.bad_sinalization;
-                break;
-            case 3:
-                markerViewTypeID = R.layout.rout_damaged;
-                break;
-        }
-        return markerViewTypeID;
     }
 
     @Override
-    public void onMapLongClick(LatLng latLng) {
-
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        switch (id) {
+            case android.R.id.home:
+                super.onBackPressed();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
-
-
 }

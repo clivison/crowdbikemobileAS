@@ -81,7 +81,7 @@ public class HeatMapActivity extends AppCompatActivity implements OnMapReadyCall
         }
 
         map.addMarker(new MarkerOptions().position(local).title("Você está aqui!!!"));
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(local, 14));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(local, 13));
 
     }
 

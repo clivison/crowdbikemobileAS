@@ -46,5 +46,6 @@
     <string name="heat_map_tip">Onde mais a galera pedala!</string>
     <string name="unknow_error">Erros ocorreram...</string>
     <string name="no_routes">Não há informações de rota no local.</string>
+    <string name="no_occurences">Não há informações de ocorrência no local.</string>
 
 </resources>
